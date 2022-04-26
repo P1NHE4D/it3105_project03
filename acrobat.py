@@ -55,7 +55,7 @@ class Acrobat(Domain):
         self.g = g
         self.tau = tau
         self.state = None
-        self.goal_height = goal_height if goal_height is not None else self.LC1
+        self.goal_height = goal_height if goal_height is not None else self.L1
         self.xp1 = xp1
         self.yp1 = yp1
         self.frames = []
