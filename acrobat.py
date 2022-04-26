@@ -1,8 +1,31 @@
+import dataclasses
+
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 from tiling import tile
 from interface import Domain
+from typing import Union
 
 ACTIONS = [-1, 0, 1]
+
+@dataclasses.dataclass
+class AnimationFrame:
+    """
+    Everything needed to render a single frame of animation
+    """
+    xp1: float
+    yp1: float
+    xp2: float
+    yp2: float
+    x_tip: float
+    y_tip: float
+    # one can not choose an action for terminal state, so allow None
+    action: Union[float, None]
+    step: int
+
+def frame_properties(f: AnimationFrame):
+    return f.xp1, f.yp1, f.xp2, f.yp2, f.x_tip, f.y_tip, f.action, f.step
 
 
 class Acrobat(Domain):
@@ -35,12 +58,18 @@ class Acrobat(Domain):
         self.goal_height = goal_height if goal_height is not None else self.LC1
         self.xp1 = xp1
         self.yp1 = yp1
-        self.coordinates = None
+        self.frames = []
 
     def get_init_state(self):
         state = np.array([0, 0, 0, 0])
         self.state = state
-        self.coordinates = self.compute_coordinates()
+        self.frames = [
+            AnimationFrame(
+                *self.compute_coordinates(),
+                action=None,
+                step=0,
+            )
+        ]
 
         return tile(state=self.state, w=self.tile_width), ACTIONS
 
@@ -48,6 +77,8 @@ class Acrobat(Domain):
         return tile(state=self.state, w=self.tile_width)
 
     def get_child_state(self, action):
+        # update latest frame with chosen action
+        self.frames[-1].action = action
 
         # intermediate computations
         theta1, theta1_dot, theta2, theta2_dot = self.state
@@ -71,18 +102,59 @@ class Acrobat(Domain):
         # update state
         self.state = np.array([theta1, theta1_dot, theta2, theta2_dot])
 
-        # update coordinates
-        self.coordinates = self.compute_coordinates()
+        # add frame
+        self.frames.append(
+            AnimationFrame(
+                *self.compute_coordinates(),
+                action=None,
+                step=len(self.frames),
+            )
+        )
 
         return tile(state=self.state, w=self.tile_width), ACTIONS
 
     def is_current_state_terminal(self):
-        y_tip = self.coordinates[-1]
+        y_tip = self.frames[-1].y_tip
         return y_tip >= self.goal_height
 
-    def visualise(self):
-        # TODO
-        pass
+    def visualise(self, filename=None):
+        # source: https://brushingupscience.com/2016/06/21/matplotlib-animations-the-easy-way/
+
+        # setup animation
+        fig, ax = plt.subplots(figsize=(5, 5))
+        xlim = (-3, 3)
+        ylim = (-3, 3)
+        ax.set(xlim=xlim, ylim=ylim)
+
+        ax.plot(xlim, [self.goal_height, self.goal_height], linestyle='dotted')
+        xp1, yp1, xp2, yp2, x_tip, y_tip, action, step = frame_properties(self.frames[0])
+        acrobat_line = ax.plot([xp1, xp2, x_tip], [yp1, yp2, y_tip], color='k', linewidth=2)[0]
+        acrobat_text = ax.text(
+            xlim[0]+0.1,
+            ylim[1]-0.1,
+            f"action: {action}\nstep: {step}",
+            horizontalalignment='left',
+            verticalalignment='top',
+        )
+
+        def animate(i):
+            xp1, yp1, xp2, yp2, x_tip, y_tip, action, step = frame_properties(self.frames[i])
+            acrobat_line.set_xdata([xp1, xp2, x_tip])
+            acrobat_line.set_ydata([yp1, yp2, y_tip])
+            acrobat_text.set_text(f"action: {action}\nstep: {step}")
+
+        anim = FuncAnimation(
+            fig=fig,
+            func=animate,
+            frames=range(1, len(self.frames)),
+            interval=25,
+        )
+
+        if filename is not None:
+            anim.save(filename)
+
+        plt.draw()
+        plt.show()
 
     def compute_coordinates(self):
         theta1, theta1_dot, theta2, theta2_dot = self.state
@@ -92,3 +164,18 @@ class Acrobat(Domain):
         x_tip = xp2 + self.L2 * np.sin(theta3)
         y_tip = yp2 - self.L2 * np.cos(theta3)
         return [self.xp1, self.yp1, xp2, yp2, x_tip, y_tip]
+
+
+if __name__ == '__main__':
+    # demonstration of the acrobat problem: implement a simple "pumping" agent that just tries to maximize the current
+    # angular velocity of the top-most joint at every step (solves the problem about 300 steps)
+    ac = Acrobat(tile_width=1)
+    ac.get_init_state()
+    while not ac.is_current_state_terminal():
+        theta1_dot = ac.state[1]
+        if theta1_dot < 0:
+            action = 1
+        else:
+            action = -1
+        ac.get_child_state(action)
+    ac.visualise(filename="demo.gif")
