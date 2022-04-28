@@ -7,8 +7,13 @@ from tiling import tile
 from interface import Domain
 from typing import Union
 
-ACTIONS = [-1, 0, 1]
+ENCODED_ACTIONS = np.array([
+    [0, 0],
+    [0, 1],
+    [1, 0]
+])
 
+ACTIONS = np.array([-1, 0, 1])
 
 @dataclasses.dataclass
 class AnimationFrame:
@@ -91,8 +96,9 @@ class Acrobat(Domain):
     def get_current_state(self):
         return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten()
 
-    def get_child_state(self, action):
+    def get_child_state(self, encoded_action):
         # update latest frame with chosen action
+        action = ACTIONS[encoded_action.dot(1 << np.arange(encoded_action.shape[-1] - 1, -1, -1))]
         self.frames[-1].action = action
 
         # intermediate computations
@@ -189,8 +195,8 @@ if __name__ == '__main__':
     while not ac.is_current_state_terminal():
         theta1_dot = ac.state[1]
         if theta1_dot < 0:
-            action = 1
+            action = np.array([1, 0])
         else:
-            action = -1
+            action = np.array([0, 0])
         ac.get_child_state(action)
     ac.visualise(filename="demo.gif")
