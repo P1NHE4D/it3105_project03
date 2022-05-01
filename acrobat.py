@@ -34,7 +34,6 @@ class Acrobat(Domain):
 
     def __init__(
             self,
-            tile_width,
             L1=1,
             L2=1,
             m1=1,
@@ -47,7 +46,6 @@ class Acrobat(Domain):
             xp1=0,
             yp1=0
     ):
-        self.tile_width = tile_width
         self.L1 = L1
         self.L2 = L2
         self.m1 = m1
@@ -187,7 +185,7 @@ class Acrobat(Domain):
 if __name__ == '__main__':
     # demonstration of the acrobat problem: implement a simple "pumping" agent that just tries to maximize the current
     # angular velocity of the top-most joint at every step (solves the problem about 300 steps)
-    ac = Acrobat(tile_width=1)
+    ac = Acrobat()
     ac.get_init_state()
     while not ac.is_current_state_terminal():
         theta1_dot = ac.state[1]
