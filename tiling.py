@@ -75,19 +75,18 @@ class Tiling:
     def visualize_grid(self):
         prop_cycle = plt.rcParams['axes.prop_cycle']
         colors = prop_cycle.by_key()['color']
-        linestyles = ['-', '--', ':']
-        legend_lines = []
+        line_styles = ['-', '--', ':']
+        lines = []
 
         fig, ax = plt.subplots(figsize=(10, 10))
         for i, grid in enumerate(self.multi_grid):
             for x in grid[0]:
-                l = ax.axvline(x=x, color=colors[i % len(colors)], linestyle=linestyles[i % len(linestyles)], label=i)
+                l = ax.axvline(x=x, color=colors[i % len(colors)], linestyle=line_styles[i % len(line_styles)], label=i)
             for y in grid[1]:
-                l = ax.axhline(y=y, color=colors[i % len(colors)], linestyle=linestyles[i % len(linestyles)])
-            legend_lines.append(l)
+                l = ax.axhline(y=y, color=colors[i % len(colors)], linestyle=line_styles[i % len(line_styles)])
+            lines.append(l)
         ax.grid(False)
-        ax.legend(legend_lines, ["Tiling #{}".format(t) for t in range(len(legend_lines))], facecolor='white',
-                  framealpha=0.9)
+        ax.legend(lines, ["Tiling #{}".format(t) for t in range(len(lines))], facecolor='white')
         ax.set_title("Tilings")
         return ax
 
