@@ -1,111 +1,111 @@
 import math
-
+import matplotlib.pyplot as plt
 import numpy as np
 
 
-def tile(
-        state: np.ndarray,
-        w: float,
-        bounds: np.ndarray,
-        displacements:np.ndarray=None,
-        n:int=None,
-):
-    """
-    tile 'state' 'n' times', with the i'th tile consisting of regions of side-length 'w' bounded at 'bounds', and being
-    displaced by w/n * displacements. As suggested by our RL intro book, we add an extra row and column of regions to
-    the top and left of a tile, to ensure that a state always overlaps with every tile.
+class Tiling:
 
-    :param state: vector describing the state as a real-numbered point in space
-    :param w: length of side of len(state)-dimensional region of tile
-    :param bounds: of shape (len(vector), 2) describes lower and upper bound for each dimension of state space, as a
-                   unit of w
-    :param displacements: vector with equal dimension to state describing the displacement of tiles
-    :param n: number of tiles
-    :return: tensor of shape (n, len(vector)) which coarse codes state
-    """
+    def __init__(
+            self,
+            bounds: np.ndarray,
+            bins: np.ndarray,
+            displacements=None,
+            tilings=None
+    ):
+        """
+        Each tiling splits a domain comprising continuous values into multiple tiles. The number of
+        tiles is determined by the *bins* parameter. Each tiling is offset by a specific amount on each
+        axis. The offset depends on the width of a bin, the number of tilings, as well as the displacement
+        factor.
 
-    if n is None:
-        # default to the **minimum** number of tiles for a given state dimensionality recommended by the book
-        n = 2 ** np.log2(4 * state.shape[0])
-    if displacements is None:
-        # default to displacements recommended by the book: the first odd numbers
-        displacements = np.array([2 * k - 1 for k in range(1, state.shape[0] + 1)])
-    offset = w / n
+        :param bounds: Boundaries of each dimension (ndarray<dimensions, lower, upper>)
+        :param bins: number of bins, i.e., tiles, for each dimension (ndarray<dimensions>)
+        :param displacements: displacement vector determining the spacing between two tilings (ndarray<tilings>)
+        :param tilings: number of tilings, i.e., the number of grids
+        """
+        self.bounds = bounds
+        self.bins = bins
+        self.displacements = displacements
+        self.tilings = tilings
+        if self.tilings is None:
+            # default to the **minimum** number of tilings
+            self.tilings = math.ceil(2 ** np.log2(4 * bounds.shape[0]))
+        if self.displacements is None:
+            # default to displacements recommended by the book: the first odd numbers
+            self.displacements = np.array([2 * k - 1 for k in range(1, bounds.shape[0] + 1)])
+        self.multi_grid = self._construct_grid()
 
-    # find tile shape
-    # for example with bounds=[(-3,3), (-2,1)] and w=2, the tile shape should be (3, 2)
+    def tile(self, state: np.ndarray, flatten=False, return_decoded=False):
+        """
+        :param state: state comprising *n* dimensions
+        :param return_decoded: if true, decoded state is returned
+        :param flatten: return flattened array
+        :return: encoded state based on the tilings
+        """
+        encoded_state = []
+        for grid in self.multi_grid:
+            encoding = []
+            for i, axis in enumerate(grid):
+                if return_decoded:
+                    encoding.append(np.digitize(state[i], axis))
+                else:
+                    encoded_axis = np.zeros(self.bins[i], dtype=int)
+                    encoded_axis[np.digitize(state[i], axis)] = 1
+                    encoding.extend(encoded_axis)
+            encoded_state.append(encoding)
+        encoded_state = np.array(encoded_state)
+        if flatten:
+            return encoded_state.flatten()
+        return np.array(encoded_state)
 
-    bounds_with_padding = [
-        (lower-w, upper)
-        for lower, upper in bounds
-    ]
+    def _construct_grid(self):
+        tile_widths = [(boundary[1] - boundary[0]) / (bins - 1) for boundary, bins in zip(self.bounds, self.bins)]
+        offsets = [tile_width / self.tilings for tile_width in tile_widths]
+        multi_grid = []
+        for i in range(self.tilings):
+            grid = []
+            for j, boundary in enumerate(self.bounds):
+                lower, upper = boundary
+                grid.append(
+                    np.linspace(lower, upper, self.bins[j] + 1)[1:-1] + i * self.displacements[j] * offsets[j]
+                )
+            multi_grid.append(grid)
+        return multi_grid
 
-    state_spans = [
-        upper - lower
-        for lower, upper in bounds_with_padding
-    ]
+    def visualize_grid(self):
+        prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = prop_cycle.by_key()['color']
+        linestyles = ['-', '--', ':']
+        legend_lines = []
 
-    tile_shape = [
-        math.ceil(state_span / w)
-        for state_span in state_spans
-    ]
+        fig, ax = plt.subplots(figsize=(10, 10))
+        for i, grid in enumerate(self.multi_grid):
+            for x in grid[0]:
+                l = ax.axvline(x=x, color=colors[i % len(colors)], linestyle=linestyles[i % len(linestyles)], label=i)
+            for y in grid[1]:
+                l = ax.axhline(y=y, color=colors[i % len(colors)], linestyle=linestyles[i % len(linestyles)])
+            legend_lines.append(l)
+        ax.grid(False)
+        ax.legend(legend_lines, ["Tiling #{}".format(t) for t in range(len(legend_lines))], facecolor='white',
+                  framealpha=0.9)
+        ax.set_title("Tilings")
+        return ax
 
-    tiles = np.zeros((n, *tile_shape))
-
-    # create bins per dimension
-    bins_per_dim = [
-        # NOTE: don't include the upper bound, as we want points exactly on this boundary to be INCLUDED in the last bin
-        list(np.arange(lower, upper, w))
-        for lower, upper in bounds_with_padding
-    ]
-
-    # mark overlapping region in each tile
-    for i in range(n):
-        # displace state negatively, which is the same as displacing the tile positively
-        state -= displacements * offset * i
-        # find indexes in  tile (one index per dimension of state space)
-        indexes = [
-            np.digitize(dim_value, bins)-1
-            for dim_value, bins in zip(state, bins_per_dim)
-        ]
-        # recall that indexing with a tuple works like this: a[(1,2,3)] == a[1][2][3]
-        tiles[i][tuple(indexes)] = 1
-
-    return tiles
 
 if __name__ == '__main__':
     # basic sanity check against ground-truth calculated by hand
-    state = np.array([0.0, 0.0])
-    tiled = tile(
-        state,
-        w=2.0,
-        bounds=[(-3.0,3.0), (-2.0,1.0)],
-        displacements=np.array([1,1]),
-        n=3,
-    )
-
-    assert np.array_equal(
-        tiled,
-        np.array(
-            [
-                [
-                    [0.,0.,0.],
-                    [0.,0.,0.],
-                    [0.,0.,1.],  # 2,2    (tile is offset by 0,0)
-                    [0.,0.,0.],
-                ],
-                [
-                    [0., 0., 0.],
-                    [0., 0., 0.],
-                    [0., 1., 0.],  # 2,1    (tile is offset by 2/3,2/3)
-                    [0., 0., 0.],
-                ],
-                [
-                    [0., 0., 0.],
-                    [0., 1., 0.],
-                    [0., 0., 0.],  # 1,1    (tile is offset by 4/3,4/3)
-                    [0., 0., 0.],
-                ],
-            ]
-        ),
-    )
+    t = Tiling(np.array([[-1, 1], [-1, 1]]), np.array([10, 10]), tilings=2, displacements=[1, 1])
+    ax: plt.Axes = t.visualize_grid()
+    samples = np.array([
+        [-0.5, -0.5],
+        [0, 0],
+        [0.5, 0.5],
+        [1, 1],
+        [-1, -1],
+        [-0.75, 0.5]
+    ])
+    for sample in samples:
+        for i, tiling in enumerate(t.tile(sample, return_decoded=True)):
+            print("x={}, y={} | Tiling: {} | Tile: {}, {}".format(*sample, i, *tiling))
+        ax.plot(sample[0], sample[1], marker='o', markersize=10)
+    plt.show()

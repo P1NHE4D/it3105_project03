@@ -3,11 +3,12 @@ import dataclasses
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from tiling import tile
+from tiling import Tiling
 from interface import Domain
 from typing import Union
 
 ACTIONS = [-1, 0, 1]
+
 
 @dataclasses.dataclass
 class AnimationFrame:
@@ -23,6 +24,7 @@ class AnimationFrame:
     # one can not choose an action for terminal state, so allow None
     action: Union[float, None]
     step: int
+
 
 def frame_properties(f: AnimationFrame):
     return f.xp1, f.yp1, f.xp2, f.yp2, f.x_tip, f.y_tip, f.action, f.step
@@ -60,6 +62,22 @@ class Acrobat(Domain):
         self.yp1 = yp1
         self.frames = []
 
+        # tiling configuration
+        # using bounds recommended by sutton-1996
+        theta1_dot_bound = 4 * np.pi
+        theta_2_dot_bound = 9 * np.pi
+        bounds = np.array([
+            [-self.tau * theta1_dot_bound, self.tau * theta1_dot_bound],
+            [-theta1_dot_bound, theta1_dot_bound],
+            [-self.tau * theta_2_dot_bound, self.tau * theta_2_dot_bound],
+            [-theta_2_dot_bound, theta_2_dot_bound]
+        ])
+        # using number of bins recommended by sutton-1996
+        bins = np.array([6, 6, 6, 6])
+        # using number of tilings recommended by sutto-1996
+        tilings = 48
+        self.tiling = Tiling(bounds=bounds, bins=bins, tilings=tilings)
+
     def get_init_state(self):
         state = np.array([0, 0, 0, 0])
         self.state = state
@@ -71,10 +89,10 @@ class Acrobat(Domain):
             )
         ]
 
-        return tile(state=self.state, w=self.tile_width), ACTIONS
+        return self.tiling.tile(self.state, flatten=True), ACTIONS
 
     def get_current_state(self):
-        return tile(state=self.state, w=self.tile_width)
+        return self.tiling.tile(self.state, flatten=True)
 
     def get_child_state(self, action):
         # update latest frame with chosen action
@@ -90,7 +108,7 @@ class Acrobat(Domain):
         d1 = self.m1 * self.LC1 ** 2 + self.m2 * (
                 self.L1 ** 2 + self.LC2 ** 2 + 2 * self.L1 * self.LC2 * np.cos(theta2)) + 2
         theta2_dot_dot = (self.m2 * self.LC2 ** 2 + 1 - (d2 ** 2 / d1)) ** -1 * (
-                    action + (d2 / d1) * phi1 - self.m2 * self.L1 * self.LC2 * theta1_dot ** 2 * np.sin(theta2) - phi2)
+                action + (d2 / d1) * phi1 - self.m2 * self.L1 * self.LC2 * theta1_dot ** 2 * np.sin(theta2) - phi2)
         theta1_dot_dot = -(d2 * theta2_dot_dot + phi1) / d1
 
         # update state variables
@@ -111,7 +129,7 @@ class Acrobat(Domain):
             )
         )
 
-        return tile(state=self.state, w=self.tile_width), ACTIONS
+        return self.tiling.tile(self.state, flatten=True), ACTIONS
 
     def is_current_state_terminal(self):
         y_tip = self.frames[-1].y_tip
@@ -130,8 +148,8 @@ class Acrobat(Domain):
         xp1, yp1, xp2, yp2, x_tip, y_tip, action, step = frame_properties(self.frames[0])
         acrobat_line = ax.plot([xp1, xp2, x_tip], [yp1, yp2, y_tip], color='k', linewidth=2)[0]
         acrobat_text = ax.text(
-            xlim[0]+0.1,
-            ylim[1]-0.1,
+            xlim[0] + 0.1,
+            ylim[1] - 0.1,
             f"action: {action}\nstep: {step}",
             horizontalalignment='left',
             verticalalignment='top',
