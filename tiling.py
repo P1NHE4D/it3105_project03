@@ -93,19 +93,11 @@ class Tiling:
 
 
 if __name__ == '__main__':
-    # basic sanity check against ground-truth calculated by hand
     t = Tiling(np.array([[-1, 1], [-1, 1]]), np.array([10, 10]), tilings=2, displacements=[1, 1])
     ax: plt.Axes = t.visualize_grid()
-    samples = np.array([
-        [-0.5, -0.5],
-        [0, 0],
-        [0.5, 0.5],
-        [1, 1],
-        [-1, -1],
-        [-0.75, 0.5]
-    ])
+    samples = np.random.uniform(-1, 1, (10, 2))
     for sample in samples:
         for i, tiling in enumerate(t.tile(sample, return_decoded=True)):
-            print("x={}, y={} | Tiling: {} | Tile: {}, {}".format(*sample, i, *tiling))
+            print("x={:.2f}, y={:.2f} | Tiling: {} | Tile: {}, {}".format(*sample, i, *tiling))
         ax.plot(sample[0], sample[1], marker='o', markersize=10)
     plt.show()
