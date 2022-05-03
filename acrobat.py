@@ -3,7 +3,7 @@ import dataclasses
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from tiling import Tiling
+from tiling import tile
 from interface import Domain
 from typing import Union
 
@@ -64,17 +64,16 @@ class Acrobat(Domain):
         # using bounds recommended by sutton-1996
         theta1_dot_bound = 4 * np.pi
         theta_2_dot_bound = 9 * np.pi
-        bounds = np.array([
+        self.bounds = np.array([
             [-self.tau * theta1_dot_bound, self.tau * theta1_dot_bound],
             [-theta1_dot_bound, theta1_dot_bound],
             [-self.tau * theta_2_dot_bound, self.tau * theta_2_dot_bound],
             [-theta_2_dot_bound, theta_2_dot_bound]
         ])
         # using number of bins recommended by sutton-1996
-        bins = np.array([6, 6, 6, 6])
+        self.bins = 6
         # using number of tilings recommended by sutto-1996
-        tilings = 48
-        self.tiling = Tiling(bounds=bounds, bins=bins, tilings=tilings)
+        self.tilings = 48
 
     def get_init_state(self):
         state = np.array([0, 0, 0, 0])
@@ -87,10 +86,10 @@ class Acrobat(Domain):
             )
         ]
 
-        return self.tiling.tile(self.state, flatten=True), ACTIONS
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ACTIONS
 
     def get_current_state(self):
-        return self.tiling.tile(self.state, flatten=True)
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten()
 
     def get_child_state(self, action):
         # update latest frame with chosen action
@@ -127,7 +126,7 @@ class Acrobat(Domain):
             )
         )
 
-        return self.tiling.tile(self.state, flatten=True), ACTIONS
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ACTIONS
 
     def is_current_state_terminal(self):
         y_tip = self.frames[-1].y_tip
