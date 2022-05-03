@@ -65,9 +65,9 @@ class Acrobat(Domain):
         theta1_dot_bound = 4 * np.pi
         theta_2_dot_bound = 9 * np.pi
         self.bounds = np.array([
-            [-self.tau * theta1_dot_bound, self.tau * theta1_dot_bound],
+            [0, 2 * np.pi],
             [-theta1_dot_bound, theta1_dot_bound],
-            [-self.tau * theta_2_dot_bound, self.tau * theta_2_dot_bound],
+            [0, 2 * np.pi],
             [-theta_2_dot_bound, theta_2_dot_bound]
         ])
         # using number of bins recommended by sutton-1996
