@@ -9,6 +9,7 @@ from typing import Union
 
 ACTIONS = [-1, 0, 1]
 
+
 @dataclasses.dataclass
 class AnimationFrame:
     """
@@ -24,6 +25,7 @@ class AnimationFrame:
     action: Union[float, None]
     step: int
 
+
 def frame_properties(f: AnimationFrame):
     return f.xp1, f.yp1, f.xp2, f.yp2, f.x_tip, f.y_tip, f.action, f.step
 
@@ -32,7 +34,6 @@ class Acrobat(Domain):
 
     def __init__(
             self,
-            tile_width,
             L1=1,
             L2=1,
             m1=1,
@@ -45,7 +46,6 @@ class Acrobat(Domain):
             xp1=0,
             yp1=0
     ):
-        self.tile_width = tile_width
         self.L1 = L1
         self.L2 = L2
         self.m1 = m1
@@ -60,6 +60,21 @@ class Acrobat(Domain):
         self.yp1 = yp1
         self.frames = []
 
+        # tiling configuration
+        # using bounds recommended by sutton-1996
+        theta1_dot_bound = 4 * np.pi
+        theta_2_dot_bound = 9 * np.pi
+        self.bounds = np.array([
+            [0, 2 * np.pi],
+            [-theta1_dot_bound, theta1_dot_bound],
+            [0, 2 * np.pi],
+            [-theta_2_dot_bound, theta_2_dot_bound]
+        ])
+        # using number of bins recommended by sutton-1996
+        self.bins = 6
+        # using number of tilings recommended by sutto-1996
+        self.tilings = 48
+
     def get_init_state(self):
         state = np.array([0, 0, 0, 0])
         self.state = state
@@ -71,10 +86,10 @@ class Acrobat(Domain):
             )
         ]
 
-        return tile(state=self.state, w=self.tile_width), ACTIONS
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ACTIONS
 
     def get_current_state(self):
-        return tile(state=self.state, w=self.tile_width)
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten()
 
     def get_child_state(self, action):
         # update latest frame with chosen action
@@ -90,7 +105,7 @@ class Acrobat(Domain):
         d1 = self.m1 * self.LC1 ** 2 + self.m2 * (
                 self.L1 ** 2 + self.LC2 ** 2 + 2 * self.L1 * self.LC2 * np.cos(theta2)) + 2
         theta2_dot_dot = (self.m2 * self.LC2 ** 2 + 1 - (d2 ** 2 / d1)) ** -1 * (
-                    action + (d2 / d1) * phi1 - self.m2 * self.L1 * self.LC2 * theta1_dot ** 2 * np.sin(theta2) - phi2)
+                action + (d2 / d1) * phi1 - self.m2 * self.L1 * self.LC2 * theta1_dot ** 2 * np.sin(theta2) - phi2)
         theta1_dot_dot = -(d2 * theta2_dot_dot + phi1) / d1
 
         # update state variables
@@ -111,7 +126,7 @@ class Acrobat(Domain):
             )
         )
 
-        return tile(state=self.state, w=self.tile_width), ACTIONS
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ACTIONS
 
     def is_current_state_terminal(self):
         y_tip = self.frames[-1].y_tip
@@ -130,8 +145,8 @@ class Acrobat(Domain):
         xp1, yp1, xp2, yp2, x_tip, y_tip, action, step = frame_properties(self.frames[0])
         acrobat_line = ax.plot([xp1, xp2, x_tip], [yp1, yp2, y_tip], color='k', linewidth=2)[0]
         acrobat_text = ax.text(
-            xlim[0]+0.1,
-            ylim[1]-0.1,
+            xlim[0] + 0.1,
+            ylim[1] - 0.1,
             f"action: {action}\nstep: {step}",
             horizontalalignment='left',
             verticalalignment='top',
@@ -169,7 +184,7 @@ class Acrobat(Domain):
 if __name__ == '__main__':
     # demonstration of the acrobat problem: implement a simple "pumping" agent that just tries to maximize the current
     # angular velocity of the top-most joint at every step (solves the problem about 300 steps)
-    ac = Acrobat(tile_width=1)
+    ac = Acrobat()
     ac.get_init_state()
     while not ac.is_current_state_terminal():
         theta1_dot = ac.state[1]
