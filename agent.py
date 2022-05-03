@@ -44,12 +44,9 @@ class Agent:
 
         progress = tqdm(range(1, self.episodes + 1))
 
-        for episode in progress:
+        for _ in progress:
             state, actions = self.domain.get_init_state()
-            if episode == 1:
-                action = np.random.choice(actions)
-            else:
-                action = self.propose_action(state=state, actions=actions, epsilon=self.epsilon)
+            action = self.propose_action(state=state, actions=actions, epsilon=self.epsilon)
 
             for step in range(self.steps):
                 successor_state, actions, reward = self.domain.get_child_state(action)
