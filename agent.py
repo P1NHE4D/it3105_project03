@@ -78,7 +78,8 @@ class Agent:
     def propose_action(self, state, actions, epsilon=0, return_sa_value=False):
         # random action with probability epsilon
         if np.random.random() < epsilon:
-            action = np.random.choice(actions)
+            action_idx = np.random.choice(actions.shape[0])
+            action = actions[action_idx]
             if return_sa_value:
                 sa_value = self.qnet.predict(np.array([np.concatenate([state, action])]))[0][0]
                 return action, sa_value
