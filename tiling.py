@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def tile(state: np.ndarray, bounds: list[list[float]], bins: int, num_of_tilings=None, displacements=None, visualize=False):
+def tile(state: np.ndarray, bounds: np.ndarray, bins: int, num_of_tilings=None, displacements=None, visualize=False):
     """
     Each tiling splits a domain comprising continuous values into multiple tiles. The number of
     tiles is determined by the *bins* parameter. Each tiling is offset by a specific amount on each
@@ -58,6 +58,7 @@ def tile(state: np.ndarray, bounds: list[list[float]], bins: int, num_of_tilings
             tile_widths=tile_widths,
             offsets=offsets
         )
+        plt.plot(state[0], state[1], 'o')
         plt.show()
 
     return tilings
@@ -78,7 +79,7 @@ def visualize_grid(
         for boundary, width, displacement, offset in zip(bounds, tile_widths, displacements, offsets):
             lower, upper = boundary + displacement * offset * i
             grid.append(
-                list(np.arange(lower, upper, width))
+                list(np.arange(lower+width, upper, width))
             )
         multi_grid.append(grid)
 
@@ -100,5 +101,7 @@ def visualize_grid(
 
 
 if __name__ == '__main__':
-    sample_state = np.array([-0.5, -0.5])
-    t = tile(sample_state, np.array([[-1, 1], [-1, 1]]), 2, 3, np.array([1, 1]), visualize=True)
+    sample_state = np.array([-1, 1])
+    t = tile(sample_state, np.array([[-1, 1], [-1, 1]]), 10, 1, np.array([1, 1]), visualize=True)
+    print(t.shape)
+    print(t)
