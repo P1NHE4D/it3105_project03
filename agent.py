@@ -72,12 +72,12 @@ class Agent:
                 state = successor_state
                 action = successor_action
 
+            self.qnet.fit(x=np.array(batch_x), y=np.array(batch_y), verbose=3)
+            self.epsilon *= self.epsilon_decay
             progress.set_description(
                 "Epsilon: {}".format(self.epsilon) +
                 " | Steps: {}".format(num_steps)
             )
-            self.qnet.fit(x=np.array(batch_x), y=np.array(batch_y), verbose=3)
-            self.epsilon *= self.epsilon_decay
 
         # store learned weights
         self.qnet.save_weights(filepath=self.filepath)
