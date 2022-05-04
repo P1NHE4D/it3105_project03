@@ -6,8 +6,8 @@ from yaml import safe_load
 def main():
     with open("config.yaml") as f:
         config = safe_load(f)
-    acrobat = Acrobat()
-    agent = Agent(acrobat, **config)
+    acrobat = Acrobat(**config['acrobat'] if config['acrobat'] is not None else {})
+    agent = Agent(acrobat, **config['agent'])
     agent.train()
 
 

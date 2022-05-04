@@ -1,11 +1,19 @@
-learning_rate: 0.01
-epsilon: 0.2
-epsilon_decay: 0.99
-episodes: 20
-steps: 300
-gamma: 0.99
-hidden_layers: [
-  [256, "relu"]
-]
-# weight_file=""
-filepath: "models/model_01"
+agent:
+  animation_interval: 5
+  learning_rate: 0.01
+  epsilon: 0.2 # project description says that complete greediness is recommended by Barto
+  #epsilon: 0.5
+  epsilon_decay: 0.95
+  episodes: 200
+  steps: 100
+  gamma: 0.99
+  hidden_layers: [
+    [256, "relu"]
+  ]
+  # weight_file=""
+  filepath: "models/model_01"
+acrobat:
+  goal_height: -1.75
+  #bounds: null
+  tilings: 10
+  bins: 8

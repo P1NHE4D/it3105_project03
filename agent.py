@@ -20,7 +20,8 @@ class Agent:
             gamma=0.99,
             hidden_layers=None,
             weight_file="",
-            filepath="models"
+            filepath="models",
+            animation_interval=1,
     ):
         self.domain = domain
         state, action = domain.get_init_state()
@@ -39,12 +40,13 @@ class Agent:
         self.steps = steps
         self.gamma = gamma
         self.filepath = filepath
+        self.animation_interval = animation_interval
 
     def train(self):
 
         progress = tqdm(range(1, self.episodes + 1))
 
-        for _ in progress:
+        for i in progress:
             state, actions = self.domain.get_init_state()
             action = self.propose_action(state=state, actions=actions, epsilon=self.epsilon)
             batch_x = []
@@ -71,6 +73,10 @@ class Agent:
                 batch_y.append(y)
                 state = successor_state
                 action = successor_action
+
+            # visualize episode
+            if i % self.animation_interval == 0:
+                self.domain.visualise()
 
             self.qnet.fit(x=np.array(batch_x), y=np.array(batch_y), verbose=3)
             self.epsilon *= self.epsilon_decay
