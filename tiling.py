@@ -34,7 +34,7 @@ def tile(state: np.ndarray, bounds: list[list[float]], bins: int, num_of_tilings
     # create bins per dimension
     bins_per_dim = np.array([
         # NOTE: don't include the upper bound, as we want points exactly on this boundary to be INCLUDED in the last bin
-        list(np.arange(boundary[0] - width, boundary[1], width))
+        np.linspace(boundary[0], boundary[1], bins + 1)[1:-1]
         for boundary, width in zip(bounds, tile_widths)
     ])
 
