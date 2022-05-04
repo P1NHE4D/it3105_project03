@@ -65,13 +65,12 @@ class Agent:
                 self.qnet.fit(x=np.array([x]), y=np.array([y]), verbose=3)
                 state = successor_state
                 action = successor_action
-
+                self.epsilon *= self.epsilon_decay
 
                 progress.set_description(
                     "Epsilon: {}".format(self.epsilon) +
                     " | Step: {}/{}".format(step, self.steps)
                 )
-            self.epsilon *= self.epsilon_decay
 
         # store learned weights
         self.qnet.save_weights(filepath=self.filepath)
