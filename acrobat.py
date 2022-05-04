@@ -15,6 +15,8 @@ ENCODED_ACTIONS = np.array([
 
 ACTIONS = np.array([-1, 0, 1])
 
+REWARD = -1
+
 @dataclasses.dataclass
 class AnimationFrame:
     """
@@ -91,7 +93,7 @@ class Acrobat(Domain):
             )
         ]
 
-        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ACTIONS
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ENCODED_ACTIONS
 
     def get_current_state(self):
         return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten()
@@ -132,7 +134,7 @@ class Acrobat(Domain):
             )
         )
 
-        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ACTIONS
+        return tile(self.state, bounds=self.bounds, num_of_tilings=self.tilings, bins=self.bins).flatten(), ENCODED_ACTIONS, REWARD
 
     def is_current_state_terminal(self):
         y_tip = self.frames[-1].y_tip

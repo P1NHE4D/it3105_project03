@@ -1,0 +1,11 @@
+learning_rate: 0.01
+epsilon: 0
+epsilon_decay: 0.99
+episodes: 20
+steps: 300
+gamma: 0.99
+hidden_layers: [
+  [256, "relu"]
+]
+# weight_file=""
+filepath: "models/model_01"

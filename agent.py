@@ -24,7 +24,7 @@ class Agent:
     ):
         self.domain = domain
         state, action = domain.get_init_state()
-        input_shape = (len(state) + len(action),)
+        input_shape = (state.shape[0] + action.shape[1],)
         if hidden_layers is None:
             hidden_layers = ["relu", 32]
         self.qnet = QNET(
@@ -48,7 +48,9 @@ class Agent:
             state, actions = self.domain.get_init_state()
             action = self.propose_action(state=state, actions=actions, epsilon=self.epsilon)
 
+            num_steps = 0
             for step in range(self.steps):
+                num_steps += 1
                 successor_state, actions, reward = self.domain.get_child_state(action)
                 x = np.concatenate([state, action])
                 y = reward
@@ -68,7 +70,8 @@ class Agent:
                 self.epsilon *= self.epsilon_decay
 
             progress.set_description(
-                "Epsilon: {}".format(self.epsilon)
+                "Epsilon: {}".format(self.epsilon) +
+                " | Steps: {}".format(num_steps)
             )
 
         # store learned weights
@@ -113,6 +116,7 @@ class QNET(Model):
             print("Unable to load weight file", e)
 
         # predict on a random sample to inform model of input size. Necessary to allow LiteModel to convert our model
+        self.lite_model = None
         self.predict(np.random.random((1, *input_shape)))
         self.lite_model: LiteModel = LiteModel.from_keras_model(self)
 
@@ -128,13 +132,9 @@ class QNET(Model):
 
     def predict(self,
                 x,
-                batch_size=None,
-                verbose=0,
-                steps=None,
-                callbacks=None,
-                max_queue_size=10,
-                workers=1,
-                use_multiprocessing=False):
+                **kwargs):
+        if self.lite_model is None:
+            return super().predict(x, **kwargs)
         return self.lite_model.predict(x)
 
 
