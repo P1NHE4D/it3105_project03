@@ -14,27 +14,27 @@ def tile(state: np.ndarray, bounds: np.ndarray, bins: int, num_of_tilings=None, 
     :param displacements: displacement of a tiling in each dimension (ndarray<num_of_dimensions>)
     :param num_of_tilings: number of tilings
     :param bins: number of bins for each dimension
-    :param bounds: lower and upper boundary for each dimension (ndarray<num_of_dimensions, 2>)
+    :param bounds: lower and upper boundary for each dimension
     :param visualize: Visualizes the grid if true
     :return: encoded state based on the tilings
     """
     if num_of_tilings is None:
         # default to the **minimum** number of tilings
-        num_of_tilings = math.ceil(2 ** np.log2(4 * bounds.shape[0]))
+        num_of_tilings = math.ceil(2 ** np.log2(4 * len(bounds)))
     if displacements is None:
         # default to displacements recommended by the book: the first odd numbers
-        displacements = np.array([2 * k - 1 for k in range(1, bounds.shape[0] + 1)])
+        displacements = np.array([2 * k - 1 for k in range(1, len(bounds) + 1)])
 
     tile_widths = [(upper - lower) / bins for lower, upper in bounds]
     offsets = [width / num_of_tilings for width in tile_widths]
 
-    tiling_shape = np.full((bounds.shape[0]), bins + 1)
+    tiling_shape = np.full((len(bounds)), bins)
     tilings = np.zeros((num_of_tilings, *tiling_shape))
 
     # create bins per dimension
     bins_per_dim = np.array([
         # NOTE: don't include the upper bound, as we want points exactly on this boundary to be INCLUDED in the last bin
-        list(np.arange(boundary[0] - width, boundary[1], width))
+        np.linspace(boundary[0], boundary[1], bins + 1)[1:-1]
         for boundary, width in zip(bounds, tile_widths)
     ])
 
@@ -44,7 +44,7 @@ def tile(state: np.ndarray, bounds: np.ndarray, bins: int, num_of_tilings=None, 
         displaced_state = state - displacements * offsets * i
         # find indexes in  tile (one index per dimension of state space)
         indexes = [
-            np.digitize(dim_value, bins) - 1
+            np.digitize(dim_value, bins)
             for dim_value, bins in zip(displaced_state, bins_per_dim)
         ]
         # recall that indexing with a tuple works like this: a[(1,2,3)] == a[1][2][3]
@@ -58,6 +58,7 @@ def tile(state: np.ndarray, bounds: np.ndarray, bins: int, num_of_tilings=None, 
             tile_widths=tile_widths,
             offsets=offsets
         )
+        plt.plot(state[0], state[1], 'o')
         plt.show()
 
     return tilings
@@ -65,7 +66,7 @@ def tile(state: np.ndarray, bounds: np.ndarray, bins: int, num_of_tilings=None, 
 
 def visualize_grid(
         num_of_tilings: int,
-        bounds: np.ndarray,
+        bounds: list[list[float]],
         displacements: np.ndarray,
         tile_widths: np.ndarray | list,
         offsets: np.ndarray | list
@@ -78,7 +79,7 @@ def visualize_grid(
         for boundary, width, displacement, offset in zip(bounds, tile_widths, displacements, offsets):
             lower, upper = boundary + displacement * offset * i
             grid.append(
-                list(np.arange(lower, upper, width))
+                list(np.arange(lower+width, upper, width))
             )
         multi_grid.append(grid)
 
@@ -100,5 +101,7 @@ def visualize_grid(
 
 
 if __name__ == '__main__':
-    sample_state = np.array([-0.5, -0.5])
-    t = tile(sample_state, np.array([[-1, 1], [-1, 1]]), 2, 3, np.array([1, 1]), visualize=True)
+    sample_state = np.array([-1, 1])
+    t = tile(sample_state, np.array([[-1, 1], [-1, 1]]), 10, 1, np.array([1, 1]), visualize=True)
+    print(t.shape)
+    print(t)

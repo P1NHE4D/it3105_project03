@@ -20,11 +20,12 @@ class Agent:
             gamma=0.99,
             hidden_layers=None,
             weight_file="",
-            filepath="models"
+            filepath="models",
+            animation_interval=1,
     ):
         self.domain = domain
         state, action = domain.get_init_state()
-        input_shape = (len(state) + len(action),)
+        input_shape = (state.shape[0] + action.shape[1],)
         if hidden_layers is None:
             hidden_layers = ["relu", 32]
         self.qnet = QNET(
@@ -39,21 +40,27 @@ class Agent:
         self.steps = steps
         self.gamma = gamma
         self.filepath = filepath
+        self.animation_interval = animation_interval
 
     def train(self):
 
         progress = tqdm(range(1, self.episodes + 1))
 
-        for _ in progress:
+        for i in progress:
             state, actions = self.domain.get_init_state()
             action = self.propose_action(state=state, actions=actions, epsilon=self.epsilon)
+            batch_x = []
+            batch_y = []
 
+            num_steps = 0
             for step in range(self.steps):
+                num_steps += 1
                 successor_state, actions, reward = self.domain.get_child_state(action)
                 x = np.concatenate([state, action])
                 y = reward
                 if self.domain.is_current_state_terminal():
-                    self.qnet.fit(x=np.array([x]), y=np.array([y]), verbose=3)
+                    batch_x.append(x)
+                    batch_y.append(y)
                     break
                 successor_action, sa_value = self.propose_action(
                     state=successor_state,
@@ -62,13 +69,20 @@ class Agent:
                     return_sa_value=True
                 )
                 y += self.gamma * sa_value
-                self.qnet.fit(x=np.array([x]), y=np.array([y]), verbose=3)
+                batch_x.append(x)
+                batch_y.append(y)
                 state = successor_state
                 action = successor_action
-                self.epsilon *= self.epsilon_decay
 
+            # visualize episode
+            if i % self.animation_interval == 0:
+                self.domain.visualise()
+
+            self.qnet.fit(x=np.array(batch_x), y=np.array(batch_y), verbose=3)
+            self.epsilon *= self.epsilon_decay
             progress.set_description(
-                "Epsilon: {}".format(self.epsilon)
+                "Epsilon: {}".format(self.epsilon) +
+                " | Steps: {}".format(num_steps)
             )
 
         # store learned weights
@@ -77,7 +91,8 @@ class Agent:
     def propose_action(self, state, actions, epsilon=0, return_sa_value=False):
         # random action with probability epsilon
         if np.random.random() < epsilon:
-            action = np.random.choice(actions)
+            action_idx = np.random.choice(actions.shape[0])
+            action = actions[action_idx]
             if return_sa_value:
                 sa_value = self.qnet.predict(np.array([np.concatenate([state, action])]))[0][0]
                 return action, sa_value
@@ -113,6 +128,7 @@ class QNET(Model):
             print("Unable to load weight file", e)
 
         # predict on a random sample to inform model of input size. Necessary to allow LiteModel to convert our model
+        self.lite_model = None
         self.predict(np.random.random((1, *input_shape)))
         self.lite_model: LiteModel = LiteModel.from_keras_model(self)
 
@@ -128,13 +144,9 @@ class QNET(Model):
 
     def predict(self,
                 x,
-                batch_size=None,
-                verbose=0,
-                steps=None,
-                callbacks=None,
-                max_queue_size=10,
-                workers=1,
-                use_multiprocessing=False):
+                **kwargs):
+        if self.lite_model is None:
+            return super().predict(x, **kwargs)
         return self.lite_model.predict(x)
 
 
